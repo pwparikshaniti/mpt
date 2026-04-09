@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Periodic • Complete Modern Table (118 Elements)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        :root {
+            --tw-color-primary: #22d3ee;
+        }
+        
+        * { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .table-container {
+            overflow-x: auto;
+            padding-bottom: 2rem;
+            /* Hide scrollbar for clean UI but keep functionality */
+            scrollbar-width: none; 
+        }
+        .table-container::-webkit-scrollbar { display: none; }
+
+        .periodic-grid {
+            display: grid;
+            /* 1 column for period numbers + 18 element columns */
+            grid-template-columns: 30px repeat(18, 62px);
+            grid-template-rows: 30px repeat(10, 92px); /* +1 row for group numbers */
+            gap: 5px;
+            width: max-content;
+            margin: 0 auto;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        
+        .axis-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #52525b; /* zinc-600 */
+        }
+
+        .element {
+            padding: 6px;
+            border-radius: 14px;
+            box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.25);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+        
+        .element:hover {
+            transform: scale(1.12) rotate(1deg);
+            box-shadow: 0 20px 40px -10px rgb(34 211 238 / 0.4);
+            z-index: 20;
+        }
+        
+        .element .number { font-size: 15px; font-weight: 600; opacity: 0.85; }
+        .element .symbol { font-size: 26px; font-weight: 700; line-height: 1; text-align: center; font-family: 'Space Grotesk', sans-serif; }
+        .element .mass { font-size: 9px; text-align: right; opacity: 0.75; font-weight: 500; }
+        
+        .name-hover {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 9999px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            box-shadow: 0 10px 20px -5px rgb(0 0 0 / 0.4);
+        }
+        
+        .element:hover .name-hover { opacity: 1; }
+        
+        .modal { animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        
+        @keyframes modalPop {
+            0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen pb-12">
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8">
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-5xl font-semibold tracking-tighter" style="font-family: 'Space Grotesk', sans-serif;">PERIODIC TABLE</h1>
+                <p class="text-cyan-300 text-sm tracking-widest">118 ELEMENTS • INTERACTIVE • RESEARCH-GRADE</p>
+            </div>
+            <div class="text-right text-xs text-zinc-400">
+                Hover for name • Click for details<br>
+                <span class="text-cyan-400">Modern design • Complete data 2026</span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div id="periodic-grid" class="periodic-grid">
+                </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-center gap-6 text-xs uppercase font-medium max-w-[1320px] mx-auto">
+            <div class="text-violet-300">Lanthanides (57–71) ↑</div>
+            <div class="w-64 h-px bg-gradient-to-r from-violet-400/30 to-pink-400/30"></div>
+            <div class="text-pink-300">Actinides (89–103) ↑</div>
+        </div>
+    </div>
+
+    <div id="modal-backdrop" onclick="if(event.target.id==='modal-backdrop') hideModal()" 
+         class="hidden fixed inset-0 bg-black/80 backdrop-blur-2xl z-50 flex items-center justify-center">
+        <div id="modal-content"
+             class="modal bg-zinc-900 w-full max-w-2xl mx-4 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+            
+            <div class="p-8">
+                <div class="flex justify-between">
+                    <div class="flex items-center gap-6">
+                        <div id="modal-symbol-box" class="w-28 h-28 flex items-center justify-center text-7xl font-bold rounded-3xl shadow-inner"></div>
+                        <div>
+                            <div class="flex items-baseline gap-4">
+                                <span id="modal-number" class="text-5xl font-mono text-zinc-400"></span>
+                                <h2 id="modal-name" class="text-4xl font-semibold tracking-tight"></h2>
+                            </div>
+                            <p id="modal-mass" class="text-xl font-mono text-zinc-300"></p>
+                            <div id="modal-category-badge" class="mt-3 inline-block text-xs px-5 py-1 rounded-3xl font-medium"></div>
+                        </div>
+                    </div>
+                    <button onclick="hideModal()" class="text-4xl text-zinc-400 hover:text-white">×</button>
+                </div>
+
+                <div class="mt-10 grid grid-cols-2 gap-10 text-sm">
+                    <div>
+                        <h3 class="uppercase tracking-widest text-xs text-zinc-400 mb-4">Basic Properties</h3>
+                        <div id="basic-info" class="space-y-3"></div>
+                    </div>
+                    <div>
+                        <h3 class="uppercase tracking-widest text-xs text-zinc-400 mb-4">Short History</h3>
+                        <p id="modal-history" class="text-zinc-300 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <div class="mt-10 pt-8 border-t border-white/10">
+                    <h3 class="uppercase tracking-widest text-xs text-zinc-400 mb-5">Discovery</h3>
+                    <div class="flex gap-8">
+                        <div class="flex-1">
+                            <p id="modal-scientist" class="font-semibold text-2xl"></p>
+                            <p id="modal-year" class="font-mono text-zinc-400"></p>
+                        </div>
+                        <div class="flex-1 text-zinc-300" id="modal-discovery-desc"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-black/60 px-8 py-4 flex items-center justify-between text-xs border-t border-white/10">
+                <button onclick="hideModal()" class="flex items-center gap-2 text-cyan-400 hover:text-cyan-300">
+                    ← Back to Table
+                </button>
+                <a id="wiki-link" href="#" target="_blank" class="flex items-center gap-1 text-cyan-400 hover:text-white">
+                    Wikipedia Article <span class="text-lg">↗</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const elements = [
+            {num:1,sym:"H",name:"Hydrogen",mass:"1.008",row:1,col:1,cat:"nonmetal",history:"Most abundant element in the universe; powers stars via fusion.",disc:"Henry Cavendish",year:1766,disc_desc:"Isolated by reacting metals with acids; recognized as distinct element.",basic:"Diatomic gas • Essential for water and life"},
+            {num:2,sym:"He",name:"Helium",mass:"4.003",row:1,col:18,cat:"noble",history:"Second most abundant element; first detected in the Sun.",disc:"Pierre Janssen & Norman Lockyer",year:1868,disc_desc:"Observed unique spectral line during solar eclipse.",basic:"Inert gas • Used in balloons and cryogenics"},
+            {num:3,sym:"Li",name:"Lithium",mass:"6.941",row:2,col:1,cat:"alkali",history:"Lightest metal; key in modern batteries.",disc:"Johan Arfwedson",year:1817,disc_desc:"Discovered in petalite mineral.",basic:"Soft metal • Rechargeable batteries"},
+            {num:4,sym:"Be",name:"Beryllium",mass:"9.012",row:2,col:2,cat:"alkaline",history:"Light and strong; used in aerospace.",disc:"Louis Vauquelin",year:1798,disc_desc:"Found in beryl gemstone.",basic:"Toxic • X-ray windows"},
+            {num:5,sym:"B",name:"Boron",mass:"10.81",row:2,col:13,cat:"metalloid",history:"Used in glass and semiconductors.",disc:"Gay-Lussac & Thénard",year:1808,disc_desc:"Isolated from boric acid.",basic:"Hard • Borosilicate glass"},
+            {num:6,sym:"C",name:"Carbon",mass:"12.011",row:2,col:14,cat:"nonmetal",history:"Basis of organic life; diamond & graphite allotropes.",disc:"Antoine Lavoisier",year:1789,disc_desc:"Recognized as element; known since antiquity.",basic:"Allotropes: diamond, graphene"},
+            {num:7,sym:"N",name:"Nitrogen",mass:"14.007",row:2,col:15,cat:"nonmetal",history:"78% of atmosphere; essential for fertilizers.",disc:"Daniel Rutherford",year:1772,disc_desc:"Removed oxygen from air.",basic:"Diatomic gas • Ammonia production"},
+            {num:8,sym:"O",name:"Oxygen",mass:"15.999",row:2,col:16,cat:"nonmetal",history:"Supports respiration and combustion.",disc:"Priestley & Scheele",year:1774,disc_desc:"Produced by heating oxides.",basic:"Most abundant in Earth's crust"},
+            {num:9,sym:"F",name:"Fluorine",mass:"18.998",row:2,col:17,cat:"halogen",history:"Most reactive element; in toothpaste.",disc:"Henri Moissan",year:1886,disc_desc:"Electrolysis of HF compound.",basic:"Highly corrosive gas"},
+            {num:10,sym:"Ne",name:"Neon",mass:"20.180",row:2,col:18,cat:"noble",history:"Used in bright signs.",disc:"Ramsay & Travers",year:1898,disc_desc:"Fractionated liquid air.",basic:"Inert • Advertising lights"},
+            {num:11,sym:"Na",name:"Sodium",mass:"22.990",row:3,col:1,cat:"alkali",history:"Vital for nerves; used in lamps.",disc:"Humphry Davy",year:1807,disc_desc:"Electrolysis of molten NaOH.",basic:"Reacts violently with water"},
+            {num:12,sym:"Mg",name:"Magnesium",mass:"24.305",row:3,col:2,cat:"alkaline",history:"Light alloy metal; in chlorophyll.",disc:"Humphry Davy",year:1808,disc_desc:"Electrolysis of magnesia.",basic:"Fireworks & aircraft"},
+            {num:13,sym:"Al",name:"Aluminium",mass:"26.982",row:3,col:13,cat:"post-transition",color:"bg-sky-500",history:"Most abundant metal in crust.",disc:"Hans Ørsted",year:1825,disc_desc:"Isolated via potassium reduction.",basic:"Light & corrosion resistant"},
+            {num:14,sym:"Si",name:"Silicon",mass:"28.085",row:3,col:14,cat:"metalloid",color:"bg-teal-500",history:"Basis of electronics and solar cells.",disc:"Jöns Berzelius",year:1824,disc_desc:"Reduced silicon fluoride.",basic:"Semiconductor"},
+            {num:15,sym:"P",name:"Phosphorus",mass:"30.974",row:3,col:15,cat:"nonmetal",color:"bg-red-500",history:"Glows in dark; in DNA.",disc:"Hennig Brand",year:1669,disc_desc:"Distilled from urine.",basic:"Matches & fertilizers"},
+            {num:16,sym:"S",name:"Sulfur",mass:"32.065",row:3,col:16,cat:"nonmetal",color:"bg-red-500",history:"Used in gunpowder since antiquity.",disc:"Known to ancients",year:"ancient",disc_desc:"Recognized by Lavoisier in 1777.",basic:"Yellow solid • Sulfuric acid"},
+            {num:17,sym:"Cl",name:"Chlorine",mass:"35.453",row:3,col:17,cat:"halogen",color:"bg-purple-500",history:"Disinfectant and PVC.",disc:"Carl Scheele",year:1774,disc_desc:"From HCl + MnO2.",basic:"Greenish gas"},
+            {num:18,sym:"Ar",name:"Argon",mass:"39.948",row:3,col:18,cat:"noble",color:"bg-indigo-500",history:"Used in welding.",disc:"Rayleigh & Ramsay",year:1894,disc_desc:"From residual air nitrogen.",basic:"Inert shielding gas"},
+
+            /// Period 4
+            {num:19,sym:"K",name:"Potassium",mass:"39.098",row:4,col:1,cat:"alkali",color:"bg-orange-500",history:"Essential nutrient; in fertilizers.",disc:"Humphry Davy",year:1807,disc_desc:"Electrolysis of potash.",basic:"Highly reactive"},
+            {num:20,sym:"Ca",name:"Calcium",mass:"40.078",row:4,col:2,cat:"alkaline",color:"bg-amber-500",history:"In bones and limestone.",disc:"Humphry Davy",year:1808,disc_desc:"Electrolysis of lime.",basic:"Structural metal in biology"},
+            {num:21,sym:"Sc",name:"Scandium",mass:"44.956",row:4,col:3,cat:"transition",color:"bg-blue-600",history:"Light aerospace alloy.",disc:"Lars Nilson",year:1879,disc_desc:"From euxenite mineral.",basic:"Rare earth-like"},
+            {num:22,sym:"Ti",name:"Titanium",mass:"47.867",row:4,col:4,cat:"transition",color:"bg-blue-600",history:"Strong, lightweight; used in implants.",disc:"William Gregor",year:1791,disc_desc:"From ilmenite.",basic:"Corrosion resistant"},
+            {num:23,sym:"V",name:"Vanadium",mass:"50.942",row:4,col:5,cat:"transition",color:"bg-blue-600",history:"Strengthens steel.",disc:"Andrés del Río",year:1801,disc_desc:"From lead vanadate.",basic:"Alloy additive"},
+            {num:24,sym:"Cr",name:"Chromium",mass:"51.996",row:4,col:6,cat:"transition",color:"bg-blue-600",history:"In stainless steel.",disc:"Louis Vauquelin",year:1797,disc_desc:"From crocoite mineral.",basic:"Shiny & hard"},
+            {num:25,sym:"Mn",name:"Manganese",mass:"54.938",row:4,col:7,cat:"transition",color:"bg-blue-600",history:"In steel and batteries.",disc:"Johan Gahn",year:1774,disc_desc:"Reduced from pyrolusite.",basic:"Essential trace element"},
+            {num:26,sym:"Fe",name:"Iron",mass:"55.845",row:4,col:8,cat:"transition",color:"bg-blue-600",history:"Most used metal; in hemoglobin.",disc:"Known to ancients",year:"ancient",disc_desc:"Smelted since ~1200 BCE.",basic:"Core of Earth"},
+            {num:27,sym:"Co",name:"Cobalt",mass:"58.933",row:4,col:9,cat:"transition",color:"bg-blue-600",history:"In magnets and batteries.",disc:"Georg Brandt",year:1735,disc_desc:"From cobaltite.",basic:"Blue pigments"},
+            {num:28,sym:"Ni",name:"Nickel",mass:"58.693",row:4,col:10,cat:"transition",color:"bg-blue-600",history:"In stainless steel and coins.",disc:"Axel Cronstedt",year:1751,disc_desc:"From kupfernickel.",basic:"Alloys"},
+            {num:29,sym:"Cu",name:"Copper",mass:"63.546",row:4,col:11,cat:"transition",color:"bg-blue-600",history:"Used since antiquity in tools.",disc:"Known to ancients",year:"ancient",disc_desc:"Native metal.",basic:"Excellent conductor"},
+            {num:30,sym:"Zn",name:"Zinc",mass:"65.38",row:4,col:12,cat:"transition",color:"bg-blue-600",history:"Galvanizing and batteries.",disc:"Andreas Marggraf",year:1746,disc_desc:"Distilled from calamine.",basic:"Brass alloy"},
+            {num:31,sym:"Ga",name:"Gallium",mass:"69.723",row:4,col:13,cat:"post-transition",color:"bg-sky-500",history:"Melts in hand; semiconductors.",disc:"Paul-Émile Lecoq de Boisbaudran",year:1875,disc_desc:"Spectroscopy of zinc ore.",basic:"Low melting point"},
+            {num:32,sym:"Ge",name:"Germanium",mass:"72.630",row:4,col:14,cat:"metalloid",color:"bg-teal-500",history:"Early transistors.",disc:"Clemens Winkler",year:1886,disc_desc:"From argyrodite.",basic:"Semiconductor"},
+            {num:33,sym:"As",name:"Arsenic",mass:"74.922",row:4,col:15,cat:"metalloid",color:"bg-teal-500",history:"Known for toxicity and pigments.",disc:"Known to ancients",year:"ancient",disc_desc:"Isolated by Albertus Magnus.",basic:"Poisonous"},
+            {num:34,sym:"Se",name:"Selenium",mass:"78.971",row:4,col:16,cat:"nonmetal",color:"bg-red-500",history:"Photocells and glass.",disc:"Jöns Berzelius",year:1817,disc_desc:"From sulfuric acid residue.",basic:"Photoconductor"},
+            {num:35,sym:"Br",name:"Bromine",mass:"79.904",row:4,col:17,cat:"halogen",color:"bg-purple-500",history:"Only liquid nonmetal at room temp.",disc:"Antoine Balard",year:1826,disc_desc:"From seawater brine.",basic:"Red-brown liquid"},
+            {num:36,sym:"Kr",name:"Krypton",mass:"83.798",row:4,col:18,cat:"noble",color:"bg-indigo-500",history:"Used in lighting.",disc:"Ramsay & Travers",year:1898,disc_desc:"Liquid air fractionation.",basic:"Inert gas"},
+
+            // Continue with remaining periods (shortened here for response length but fully populated in real use)
+            // Period 5: Rb (37, col1) to Xe (54, col18)
+            // Period 6: Cs (55, col1), Ba (56, col2), then La (57, col3) → Lu (71, col17), Hf (72, col4) to Rn (86, col18)
+            // Period 7: Fr (87, col1), Ra (88, col2), Ac (89, col3) → Lr (103, col17), Rf (104, col4) to Og (118, col18)
+
+            // Full additional entries (abbreviated in display but complete in code):
+            {num:37,sym:"Rb",name:"Rubidium",mass:"85.468",row:5,col:1,cat:"alkali",color:"bg-red-500",history:"Highly reactive soft metal.",disc:"Robert Bunsen & Gustav Kirchhoff",year:1861,disc_desc:"Discovered via spectroscopy.",basic:"Soft, reactive metal"},
+            {num:38,sym:"Sr",name:"Strontium",mass:"87.62",row:5,col:2,cat:"alkaline",color:"bg-orange-500",history:"Used in fireworks for red color.",disc:"Adair Crawford",year:1790,disc_desc:"From strontianite mineral.",basic:"Soft silvery metal"},
+            {num:39,sym:"Y",name:"Yttrium",mass:"88.906",row:5,col:3,cat:"transition",color:"bg-yellow-500",history:"Used in LEDs and phosphors.",disc:"Johan Gadolin",year:1794,disc_desc:"From mineral ytterbite.",basic:"Silvery transition metal"},
+            {num:40,sym:"Zr",name:"Zirconium",mass:"91.224",row:5,col:4,cat:"transition",color:"bg-yellow-500",history:"Corrosion-resistant metal.",disc:"Martin Klaproth",year:1789,disc_desc:"From zircon mineral.",basic:"Strong, ductile metal"},
+            {num:41,sym:"Nb",name:"Niobium",mass:"92.906",row:5,col:5,cat:"transition",color:"bg-yellow-500",history:"Used in superconductors.",disc:"Charles Hatchett",year:1801,disc_desc:"From columbite ore.",basic:"Gray metallic element"},
+            {num:42,sym:"Mo",name:"Molybdenum",mass:"95.95",row:5,col:6,cat:"transition",color:"bg-yellow-500",history:"Important alloy metal.",disc:"Carl Wilhelm Scheele",year:1778,disc_desc:"From molybdenite.",basic:"Hard silvery metal"},
+            {num:43,sym:"Tc",name:"Technetium",mass:"98",row:5,col:7,cat:"transition",color:"bg-yellow-500",history:"First artificially produced element.",disc:"Carlo Perrier & Emilio Segrè",year:1937,disc_desc:"From molybdenum bombarded with deuterons.",basic:"Radioactive metal"},
+            {num:44,sym:"Ru",name:"Ruthenium",mass:"101.07",row:5,col:8,cat:"transition",color:"bg-yellow-500",history:"Used in electronics and catalysts.",disc:"Karl Ernst Claus",year:1844,disc_desc:"From platinum ores.",basic:"Hard white metal"},
+            {num:45,sym:"Rh",name:"Rhodium",mass:"102.91",row:5,col:9,cat:"transition",color:"bg-yellow-500",history:"Used in catalytic converters.",disc:"William Hyde Wollaston",year:1803,disc_desc:"From platinum ore.",basic:"Rare silvery metal"},
+            {num:46,sym:"Pd",name:"Palladium",mass:"106.42",row:5,col:10,cat:"transition",color:"bg-yellow-500",history:"Absorbs hydrogen efficiently.",disc:"William Hyde Wollaston",year:1803,disc_desc:"From platinum ores.",basic:"Soft white metal"},
+            {num:47,sym:"Ag",name:"Silver",mass:"107.87",row:5,col:11,cat:"transition",color:"bg-yellow-500",history:"Best electrical conductor.",disc:"Ancient",year:"Prehistoric",disc_desc:"Known since antiquity.",basic:"Shiny precious metal"},
+            {num:48,sym:"Cd",name:"Cadmium",mass:"112.41",row:5,col:12,cat:"transition",color:"bg-yellow-500",history:"Used in batteries and coatings.",disc:"Friedrich Stromeyer",year:1817,disc_desc:"From zinc ores.",basic:"Soft bluish metal"},
+            {num:49,sym:"In",name:"Indium",mass:"114.82",row:5,col:13,cat:"post-transition",color:"bg-green-500",history:"Used in touchscreens.",disc:"Reich & Richter",year:1863,disc_desc:"From zinc ores via spectroscopy.",basic:"Soft malleable metal"},
+            {num:50,sym:"Sn",name:"Tin",mass:"118.71",row:5,col:14,cat:"post-transition",color:"bg-green-500",history:"Used since Bronze Age.",disc:"Ancient",year:"Prehistoric",disc_desc:"Known since early civilizations.",basic:"Soft silvery metal"},
+            {num:51,sym:"Sb",name:"Antimony",mass:"121.76",row:5,col:15,cat:"metalloid",color:"bg-blue-500",history:"Used in flame retardants.",disc:"Ancient",year:"Prehistoric",disc_desc:"Known in ancient times.",basic:"Brittle metalloid"},
+            {num:52,sym:"Te",name:"Tellurium",mass:"127.60",row:5,col:16,cat:"metalloid",color:"bg-blue-500",history:"Used in solar panels.",disc:"Franz-Joseph Müller",year:1782,disc_desc:"From gold ores.",basic:"Silvery brittle element"},
+            {num:53,sym:"I",name:"Iodine",mass:"126.90",row:5,col:17,cat:"halogen",color:"bg-purple-500",history:"Essential for thyroid health.",disc:"Bernard Courtois",year:1811,disc_desc:"From seaweed ash.",basic:"Purple-black solid"},
+            {num:54,sym:"Xe",name:"Xenon",mass:"131.29",row:5,col:18,cat:"noble",color:"bg-indigo-500",history:"Used in lamps and anesthesia.",disc:"Ramsay & Travers",year:1898,disc_desc:"From liquid air.",basic:"Colorless inert gas"},
+            {num:55,sym:"Cs",name:"Cesium",mass:"132.91",row:6,col:1,cat:"alkali",color:"bg-red-500",history:"Highly reactive; used in atomic clocks.",disc:"Robert Bunsen & Gustav Kirchhoff",year:1860,disc_desc:"Discovered via spectroscopy (blue lines).",basic:"Soft golden alkali metal"},
+            {num:56,sym:"Ba",name:"Barium",mass:"137.33",row:6,col:2,cat:"alkaline",color:"bg-orange-500",history:"Used in X-ray imaging and fireworks.",disc:"Carl Wilhelm Scheele",year:1772,disc_desc:"Identified in barite; later isolated by Humphry Davy.",basic:"Soft reactive metal"},
+
+            {num:57,sym:"La",name:"Lanthanum",mass:"138.91",row:6,col:3,cat:"lanthanide",color:"bg-violet-500",history:"First rare earth element; used in optics and batteries.",disc:"Carl Gustaf Mosander",year:1839,disc_desc:"Separated from cerium nitrate.",basic:"Soft silvery metal"},
+            // ... (elements 40-56, 57-86, 87-118 follow the same pattern with accurate data, categories, and short researched histories)
+
+            // Lanthanides & Actinides (positioned in bottom rows)
+            
+            {num:58,sym:"Ce",name:"Cerium",mass:"140.12",row:8,col:4,cat:"lanthanide",color:"bg-violet-500",history:"Used in catalytic converters.",disc:"Jöns Jakob Berzelius & Wilhelm Hisinger",year:1803,disc_desc:"From cerite mineral.",basic:"Reactive rare earth metal"},
+            {num:59,sym:"Pr",name:"Praseodymium",mass:"140.91",row:8,col:5,cat:"lanthanide",color:"bg-violet-500",history:"Used in strong magnets.",disc:"Carl Auer von Welsbach",year:1885,disc_desc:"Separated from didymium.",basic:"Soft greenish metal"},
+            {num:60,sym:"Nd",name:"Neodymium",mass:"144.24",row:8,col:6,cat:"lanthanide",color:"bg-violet-500",history:"Key element in powerful magnets.",disc:"Carl Auer von Welsbach",year:1885,disc_desc:"Separated from didymium.",basic:"Silvery rare earth"},
+            {num:61,sym:"Pm",name:"Promethium",mass:"145",row:8,col:7,cat:"lanthanide",color:"bg-violet-500",history:"Radioactive; used in research.",disc:"Marinsky, Glendenin & Coryell",year:1945,disc_desc:"From uranium fission products.",basic:"Radioactive metal"},
+            {num:62,sym:"Sm",name:"Samarium",mass:"150.36",row:8,col:8,cat:"lanthanide",color:"bg-violet-500",history:"Used in magnets and cancer therapy.",disc:"Paul-Émile Lecoq de Boisbaudran",year:1879,disc_desc:"From samarskite mineral.",basic:"Hard rare earth"},
+            {num:63,sym:"Eu",name:"Europium",mass:"151.96",row:8,col:9,cat:"lanthanide",color:"bg-violet-500",history:"Used in TV screens and LEDs.",disc:"Eugène-Anatole Demarçay",year:1901,disc_desc:"From samarium compounds.",basic:"Soft reactive metal"},
+            {num:64,sym:"Gd",name:"Gadolinium",mass:"157.25",row:8,col:10,cat:"lanthanide",color:"bg-violet-500",history:"Used in MRI contrast agents.",disc:"Jean Charles Galissard de Marignac",year:1880,disc_desc:"From gadolinite mineral.",basic:"Magnetic metal"},
+            {num:65,sym:"Tb",name:"Terbium",mass:"158.93",row:8,col:11,cat:"lanthanide",color:"bg-violet-500",history:"Used in green phosphors.",disc:"Carl Mosander",year:1843,disc_desc:"From yttria separation.",basic:"Silvery rare earth"},
+            {num:66,sym:"Dy",name:"Dysprosium",mass:"162.50",row:8,col:12,cat:"lanthanide",color:"bg-violet-500",history:"Used in nuclear reactors.",disc:"Paul-Émile Lecoq de Boisbaudran",year:1886,disc_desc:"From holmium oxide.",basic:"Highly magnetic metal"},
+            {num:67,sym:"Ho",name:"Holmium",mass:"164.93",row:8,col:13,cat:"lanthanide",color:"bg-violet-500",history:"Strong magnetic properties.",disc:"Marc Delafontaine & Jacques-Louis Soret",year:1878,disc_desc:"Spectroscopic discovery.",basic:"Rare earth metal"},
+            {num:68,sym:"Er",name:"Erbium",mass:"167.26",row:8,col:14,cat:"lanthanide",color:"bg-violet-500",history:"Used in fiber optics.",disc:"Carl Mosander",year:1843,disc_desc:"From yttria.",basic:"Pinkish metal"},
+            {num:69,sym:"Tm",name:"Thulium",mass:"168.93",row:8,col:15,cat:"lanthanide",color:"bg-violet-500",history:"Rare; used in portable X-rays.",disc:"Per Teodor Cleve",year:1879,disc_desc:"From erbia.",basic:"Soft rare earth"},
+            {num:70,sym:"Yb",name:"Ytterbium",mass:"173.05",row:8,col:16,cat:"lanthanide",color:"bg-violet-500",history:"Used in atomic clocks.",disc:"Jean Charles Galissard de Marignac",year:1878,disc_desc:"From ytterbia.",basic:"Silvery metal"},
+            {num:71,sym:"Lu",name:"Lutetium",mass:"174.97",row:8,col:17,cat:"lanthanide",color:"bg-violet-500",history:"Used in PET scan detectors.",disc:"Georges Urbain",year:1907,disc_desc:"Separated from ytterbium.",basic:"Dense rare earth metal"},
+            {num:72,sym:"Hf",name:"Hafnium",mass:"178.49",row:6,col:4,cat:"transition",color:"bg-yellow-500",history:"Used in nuclear control rods.",disc:"Dirk Coster & George de Hevesy",year:1923,disc_desc:"Identified via X-ray spectroscopy.",basic:"Corrosion-resistant metal"},
+
+            {num:73,sym:"Ta",name:"Tantalum",mass:"180.95",row:6,col:5,cat:"transition",color:"bg-yellow-500",history:"Highly corrosion-resistant; used in electronics.",disc:"Anders Ekeberg",year:1802,disc_desc:"From tantalite mineral.",basic:"Dense hard metal"},
+
+            {num:74,sym:"W",name:"Tungsten",mass:"183.84",row:6,col:6,cat:"transition",color:"bg-yellow-500",history:"Highest melting point metal.",disc:"Fausto Elhuyar & Juan Elhuyar",year:1783,disc_desc:"From wolframite mineral.",basic:"Very dense metal"},
+
+            {num:75,sym:"Re",name:"Rhenium",mass:"186.21",row:6,col:7,cat:"transition",color:"bg-yellow-500",history:"Used in jet engines.",disc:"Ida Noddack, Walter Noddack & Otto Berg",year:1925,disc_desc:"From platinum ores.",basic:"Rare heavy metal"},
+
+            {num:76,sym:"Os",name:"Osmium",mass:"190.23",row:6,col:8,cat:"transition",color:"bg-yellow-500",history:"Densest natural element.",disc:"Smithson Tennant",year:1803,disc_desc:"From platinum residues.",basic:"Hard brittle metal"},
+
+            {num:77,sym:"Ir",name:"Iridium",mass:"192.22",row:6,col:9,cat:"transition",color:"bg-yellow-500",history:"Highly corrosion-resistant.",disc:"Smithson Tennant",year:1803,disc_desc:"From platinum ores.",basic:"Very dense metal"},
+
+            {num:78,sym:"Pt",name:"Platinum",mass:"195.08",row:6,col:10,cat:"transition",color:"bg-yellow-500",history:"Used in catalysts.",disc:"Antonio de Ulloa",year:1735,disc_desc:"From South American deposits.",basic:"Precious metal"},
+
+            {num:79,sym:"Au",name:"Gold",mass:"196.97",row:6,col:11,cat:"transition",color:"bg-yellow-500",history:"Valued since ancient times.",disc:"Ancient",year:0,disc_desc:"Known since antiquity.",basic:"Noble metal"},
+
+            {num:80,sym:"Hg",name:"Mercury",mass:"200.59",row:6,col:12,cat:"transition",color:"bg-yellow-500",history:"Only liquid metal at room temperature.",disc:"Ancient",year:0,disc_desc:"Known since early civilizations.",basic:"Liquid metal"},
+
+            {num:81,sym:"Tl",name:"Thallium",mass:"204.38",row:6,col:13,cat:"post-transition",color:"bg-green-500",history:"Highly toxic metal.",disc:"William Crookes",year:1861,disc_desc:"Detected via spectroscopy.",basic:"Soft toxic metal"},
+
+            {num:82,sym:"Pb",name:"Lead",mass:"207.2",row:6,col:14,cat:"post-transition",color:"bg-green-500",history:"Used in batteries.",disc:"Ancient",year:0,disc_desc:"Known since antiquity.",basic:"Heavy metal"},
+
+            {num:83,sym:"Bi",name:"Bismuth",mass:"208.98",row:6,col:15,cat:"post-transition",color:"bg-green-500",history:"Low toxicity metal.",disc:"Claude François Geoffroy",year:1753,disc_desc:"Distinguished from lead.",basic:"Brittle metal"},
+
+            {num:84,sym:"Po",name:"Polonium",mass:"209",row:6,col:16,cat:"post-transition",color:"bg-green-500",history:"Highly radioactive.",disc:"Marie Curie & Pierre Curie",year:1898,disc_desc:"From pitchblende.",basic:"Radioactive metal"},
+
+            {num:85,sym:"At",name:"Astatine",mass:"210",row:6,col:17,cat:"halogen",color:"bg-purple-500",history:"Rarest natural element.",disc:"Dale Corson, Kenneth MacKenzie & Emilio Segrè",year:1940,disc_desc:"From bismuth bombardment.",basic:"Radioactive halogen"},
+
+            {num:86,sym:"Rn",name:"Radon",mass:"222",row:6,col:18,cat:"noble",color:"bg-indigo-500",history:"Radioactive noble gas.",disc:"Friedrich Dorn",year:1900,disc_desc:"From radium decay.",basic:"Inert gas"},
+
+            {num:87,sym:"Fr",name:"Francium",mass:"223",row:7,col:1,cat:"alkali",color:"bg-red-500",history:"Extremely rare element.",disc:"Marguerite Perey",year:1939,disc_desc:"From actinium decay.",basic:"Highly radioactive metal"},
+
+            {num:88,sym:"Ra",name:"Radium",mass:"226",row:7,col:2,cat:"alkaline",color:"bg-orange-500",history:"Used in luminous paints.",disc:"Marie Curie & Pierre Curie",year:1898,disc_desc:"From pitchblende.",basic:"Radioactive metal"},     
+            // ... continuing to Lu (71)
+            {num:89,sym:"Ac",name:"Actinium",mass:"227",row:7,col:3,cat:"actinide",color:"bg-pink-500",history:"Radioactive; glows blue.",disc:"André Debierne",year:1899,disc_desc:"From pitchblende.",basic:"Radioactive"},
+
+            {num:90,sym:"Th",name:"Thorium",mass:"232.04",row:9,col:4,cat:"actinide",color:"bg-pink-500",history:"Potential nuclear fuel.",disc:"Jöns Jakob Berzelius",year:1828,disc_desc:"From thorite mineral.",basic:"Radioactive metal"},
+
+            {num:91,sym:"Pa",name:"Protactinium",mass:"231.04",row:9,col:5,cat:"actinide",color:"bg-pink-500",history:"Rare radioactive element.",disc:"Kasimir Fajans & Otto Göhring",year:1913,disc_desc:"From uranium decay.",basic:"Dense radioactive metal"},
+
+            {num:92,sym:"U",name:"Uranium",mass:"238.03",row:9,col:6,cat:"actinide",color:"bg-pink-500",history:"Nuclear fuel.",disc:"Martin Klaproth",year:1789,disc_desc:"From pitchblende.",basic:"Fissile"},
+
+            {num:93,sym:"Np",name:"Neptunium",mass:"237",row:9,col:7,cat:"actinide",color:"bg-pink-500",history:"First transuranium element.",disc:"Edwin McMillan & Philip Abelson",year:1940,disc_desc:"From uranium neutron bombardment.",basic:"Radioactive metal"},
+
+            {num:94,sym:"Pu",name:"Plutonium",mass:"244",row:9,col:8,cat:"actinide",color:"bg-pink-500",history:"Used in nuclear weapons.",disc:"Glenn Seaborg team",year:1940,disc_desc:"From uranium reactions.",basic:"Fissile radioactive metal"},
+
+            {num:95,sym:"Am",name:"Americium",mass:"243",row:9,col:9,cat:"actinide",color:"bg-pink-500",history:"Used in smoke detectors.",disc:"Glenn Seaborg",year:1944,disc_desc:"From plutonium neutron capture.",basic:"Radioactive element"},
+
+            {num:96,sym:"Cm",name:"Curium",mass:"247",row:9,col:10,cat:"actinide",color:"bg-pink-500",history:"Named after Marie Curie.",disc:"Seaborg, James & Ghiorso",year:1944,disc_desc:"From americium bombardment.",basic:"Highly radioactive"},
+
+            {num:97,sym:"Bk",name:"Berkelium",mass:"247",row:9,col:11,cat:"actinide",color:"bg-pink-500",history:"Produced in accelerators.",disc:"Stanley Thompson team",year:1949,disc_desc:"From americium bombardment.",basic:"Synthetic metal"},
+
+            {num:98,sym:"Cf",name:"Californium",mass:"251",row:9,col:12,cat:"actinide",color:"bg-pink-500",history:"Neutron source.",disc:"Stanley Thompson team",year:1950,disc_desc:"From curium bombardment.",basic:"Highly radioactive"},
+
+            {num:99,sym:"Es",name:"Einsteinium",mass:"252",row:9,col:13,cat:"actinide",color:"bg-pink-500",history:"Found in nuclear test debris.",disc:"Albert Ghiorso team",year:1952,disc_desc:"From hydrogen bomb residues.",basic:"Synthetic radioactive"},
+
+            {num:100,sym:"Fm",name:"Fermium",mass:"257",row:9,col:14,cat:"actinide",color:"bg-pink-500",history:"From nuclear explosions.",disc:"Albert Ghiorso team",year:1952,disc_desc:"From thermonuclear tests.",basic:"Radioactive metal"},
+
+            {num:101,sym:"Md",name:"Mendelevium",mass:"258",row:9,col:15,cat:"actinide",color:"bg-pink-500",history:"Named after Mendeleev.",disc:"Ghiorso, Seaborg team",year:1955,disc_desc:"From einsteinium bombardment.",basic:"Synthetic element"},
+
+            {num:102,sym:"No",name:"Nobelium",mass:"259",row:9,col:16,cat:"actinide",color:"bg-pink-500",history:"Named after Alfred Nobel.",disc:"Joint Institute for Nuclear Research",year:1966,disc_desc:"Heavy ion collisions.",basic:"Radioactive synthetic"},
+
+            {num:103,sym:"Lr",name:"Lawrencium",mass:"266",row:9,col:17,cat:"actinide",color:"bg-pink-500",history:"Named after Ernest Lawrence.",disc:"Lawrence Berkeley Lab",year:1961,disc_desc:"From californium bombardment.",basic:"Synthetic metal"},
+
+            {num:104,sym:"Rf",name:"Rutherfordium",mass:"267",row:7,col:4,cat:"transition",color:"bg-yellow-500",history:"Named after Rutherford.",disc:"Dubna & Berkeley teams",year:1964,disc_desc:"Heavy ion collisions.",basic:"Synthetic transition metal"},
+            {num:105,sym:"Db",name:"Dubnium",mass:"268",row:7,col:5,cat:"transition",color:"bg-yellow-500",history:"Named after Dubna lab.",disc:"Soviet scientists",year:1968,disc_desc:"From heavy ion fusion.",basic:"Radioactive synthetic"},
+            {num:106,sym:"Sg",name:"Seaborgium",mass:"269",row:7,col:6,cat:"transition",color:"bg-yellow-500",history:"Named after Glenn Seaborg.",disc:"Berkeley team",year:1974,disc_desc:"From oxygen bombardment.",basic:"Synthetic metal"},
+            {num:107,sym:"Bh",name:"Bohrium",mass:"270",row:7,col:7,cat:"transition",color:"bg-yellow-500",history:"Named after Niels Bohr.",disc:"German scientists",year:1981,disc_desc:"Heavy ion reactions.",basic:"Radioactive element"},
+            {num:108,sym:"Hs",name:"Hassium",mass:"277",row:7,col:8,cat:"transition",color:"bg-yellow-500",history:"Named after Hesse, Germany.",disc:"GSI Darmstadt",year:1984,disc_desc:"Lead bombardment.",basic:"Synthetic metal"},
+            {num:109,sym:"Mt",name:"Meitnerium",mass:"278",row:7,col:9,cat:"transition",color:"bg-yellow-500",history:"Named after Lise Meitner.",disc:"German team",year:1982,disc_desc:"Bismuth bombardment.",basic:"Unknown properties"},
+            {num:110,sym:"Ds",name:"Darmstadtium",mass:"281",row:7,col:10,cat:"transition",color:"bg-yellow-500",history:"Named after Darmstadt.",disc:"GSI Germany",year:1994,disc_desc:"Nickel + lead fusion.",basic:"Synthetic element"},
+            {num:111,sym:"Rg",name:"Roentgenium",mass:"282",row:7,col:11,cat:"transition",color:"bg-yellow-500",history:"Named after Roentgen.",disc:"GSI Germany",year:1994,disc_desc:"Heavy ion collisions.",basic:"Radioactive"},
+            {num:112,sym:"Cn",name:"Copernicium",mass:"285",row:7,col:12,cat:"transition",color:"bg-yellow-500",history:"Named after Copernicus.",disc:"GSI Germany",year:1996,disc_desc:"Zinc + lead fusion.",basic:"Volatile metal"},
+            {num:113,sym:"Nh",name:"Nihonium",mass:"286",row:7,col:13,cat:"post-transition",color:"bg-green-500",history:"First element discovered in Japan.",disc:"RIKEN team",year:2004,disc_desc:"Bismuth bombardment.",basic:"Synthetic metal"},
+            {num:114,sym:"Fl",name:"Flerovium",mass:"289",row:7,col:14,cat:"post-transition",color:"bg-green-500",history:"Named after Flerov lab.",disc:"Dubna team",year:1998,disc_desc:"Plutonium + calcium.",basic:"Superheavy element"},
+            {num:115,sym:"Mc",name:"Moscovium",mass:"290",row:7,col:15,cat:"post-transition",color:"bg-green-500",history:"Named after Moscow region.",disc:"Dubna team",year:2003,disc_desc:"Americium + calcium.",basic:"Radioactive synthetic"},
+            {num:116,sym:"Lv",name:"Livermorium",mass:"293",row:7,col:16,cat:"post-transition",color:"bg-green-500",history:"Named after Livermore lab.",disc:"Joint US-Russia team",year:2000,disc_desc:"Curium + calcium.",basic:"Synthetic element"},
+            {num:117,sym:"Ts",name:"Tennessine",mass:"294",row:7,col:17,cat:"halogen",color:"bg-purple-500",history:"Second heaviest halogen.",disc:"Joint US-Russia team",year:2010,disc_desc:"Berkelium + calcium.",basic:"Highly radioactive"},
+            {num:118,sym:"Og",name:"Oganesson",mass:"294",row:7,col:18,cat:"noble",color:"bg-indigo-500",history:"Heaviest synthesized element.",disc:"Yuri Oganessian team",year:2002,disc_desc:"Calcium-48 + Californium-249 collision.",basic:"Superheavy • Synthetic"}
+        ];
+
+        function getElementColor(cat) {
+            return cat === "nonmetal" ? "bg-red-500" : 
+                   cat === "noble" ? "bg-indigo-500" : 
+                   cat === "alkali" ? "bg-orange-500" : 
+                   cat === "alkaline" ? "bg-amber-500" : 
+                   cat === "transition" ? "bg-blue-600" : 
+                   cat === "lanthanide" ? "bg-violet-500" : 
+                   cat === "actinide" ? "bg-pink-500" : 
+                   cat === "halogen" ? "bg-purple-500" :
+                   cat === "metalloid" ? "bg-teal-500" :
+                   "bg-green-500";
+        }
+
+        function renderTable() {
+            const grid = document.getElementById('periodic-grid');
+            grid.innerHTML = '';
+
+            // Add Group Numbers (1-18) at the top
+            for(let c = 1; c <= 18; c++) {
+                const groupLabel = document.createElement('div');
+                groupLabel.className = 'axis-label';
+                // Grid layout is offset by 1 row and 1 col due to labels
+                groupLabel.style.gridRow = 1;
+                groupLabel.style.gridColumn = c + 1;
+                groupLabel.textContent = c;
+                grid.appendChild(groupLabel);
+            }
+
+            // Add Period Numbers (1-7) down the side
+            for(let r = 1; r <= 7; r++) {
+                const periodLabel = document.createElement('div');
+                periodLabel.className = 'axis-label';
+                periodLabel.style.gridRow = r + 1;
+                periodLabel.style.gridColumn = 1;
+                periodLabel.textContent = r;
+                grid.appendChild(periodLabel);
+            }
+
+            elements.forEach(el => {
+                const div = document.createElement('div');
+                div.className = `element ${getElementColor(el.cat)} text-white`;
+                
+                // Offset by +1 because row 1 is Groups and col 1 is Periods
+                div.style.gridRow = (el.row || 1) + 1;
+                div.style.gridColumn = (el.col || 1) + 1;
+
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <div class="number">${el.num}</div>
+                        <div class="mass">${el.mass}</div>
+                    </div>
+                    <div class="symbol text-center">${el.sym}</div>
+                    <div class="name-hover">${el.name}</div>
+                `;
+
+                div.addEventListener('click', () => showModal(el));
+                grid.appendChild(div);
+            });
+        }
+
+        function showModal(el) {
+            document.getElementById('modal-symbol-box').innerHTML = `<span class="drop-shadow">${el.sym}</span>`;
+            document.getElementById('modal-symbol-box').className = `w-28 h-28 flex items-center justify-center text-7xl font-bold rounded-3xl shadow-inner ${getElementColor(el.cat)} text-white`;
+
+            document.getElementById('modal-number').textContent = el.num;
+            document.getElementById('modal-name').textContent = el.name;
+            document.getElementById('modal-mass').innerHTML = `Atomic mass: <span class="font-semibold">${el.mass}</span> u`;
+
+            const badge = document.getElementById('modal-category-badge');
+            badge.textContent = el.cat.toUpperCase();
+            badge.className = `mt-3 inline-block text-xs px-5 py-1 rounded-3xl font-medium ${getElementColor(el.cat)} text-white`;
+
+            document.getElementById('basic-info').innerHTML = `
+                <div><span class="text-zinc-400">Symbol:</span> <span class="font-medium">${el.sym}</span></div>
+                <div><span class="text-zinc-400">Atomic Number:</span> <span class="font-medium">${el.num}</span></div>
+                <div class="pt-2 text-xs">${el.basic || 'Basic chemical properties vary by group.'}</div>
+            `;
+
+            document.getElementById('modal-history').innerHTML = el.history;
+            document.getElementById('modal-scientist').innerHTML = el.disc;
+            document.getElementById('modal-year').innerHTML = `Year: ${el.year}`;
+            document.getElementById('modal-discovery-desc').innerHTML = el.disc_desc;
+
+            document.getElementById('wiki-link').href = `https://en.wikipedia.org/wiki/${el.name}`;
+
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-backdrop').classList.add('flex');
+        }
+
+        function hideModal() {
+            const backdrop = document.getElementById('modal-backdrop');
+            backdrop.classList.add('hidden');
+            backdrop.classList.remove('flex');
+        }
+
+        window.onload = () => {
+            renderTable();
+        };
+    </script>
+</body>
+</html>
